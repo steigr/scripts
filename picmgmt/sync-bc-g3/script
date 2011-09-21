@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
-if [ -f "~/.sync-bc-g3" ];
-  . ~/.sync-bc-g3
+if [ -f "$HOME/.sync-bc-g3" ]; then
+  source $HOME/.sync-bc-g3
 else
 cat <<ENOCFG
 configuration ~/.sync-bc-g3 not found!
@@ -17,15 +17,16 @@ Example:
 
 --------------------------------------
 GALLERYBASE="/var/www/gallery3/app"
-INCOMING="~/pictures"
-IMPORT="~/.picsync"
+INCOMING="$HOME/pictures"
+IMPORT="$HOME/.picsync"
 --------------------------------------
 ENOCFG
 fi
 
-if $DEBUG; then
-set +x
+if [ "$DEBUG" = "true" ]; then
+  set -x
 fi
+
 
 MD5INCOMING="/tmp/$$.incoming"
 MD5GALLERY="/tmp/$$.gallery"
