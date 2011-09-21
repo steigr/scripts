@@ -1,0 +1,62 @@
+#!/bin/sh
+
+if [ -f "~/.sync-bc-g3" ];
+  . ~/.sync-bc-g3
+else
+cat <<ENOCFG
+configuration ~/.sync-bc-g3 not found!
+
+Please create one first,
+there are 3 variable to be set:
+
+GALLERYBASE path to your Gallery3 installation
+INCOMING    path to your Folder, which should bei synced
+IMPORT      path to Folder where all new file should be linked (ln)
+
+Example:
+
+--------------------------------------
+GALLERYBASE="/var/www/gallery3/app"
+INCOMING="~/pictures"
+IMPORT="~/.picsync"
+--------------------------------------
+ENOCFG
+fi
+
+if $DEBUG; then
+set +x
+fi
+
+MD5INCOMING="/tmp/$$.incoming"
+MD5GALLERY="/tmp/$$.gallery"
+
+#one should be enough
+[ -f  ~/.sync-bc-g3.lock ] && exit 0
+touch  ~/.sync-bc-g3.lock
+
+# clean up
+rm $IMPORT/* 2>/dev/null
+
+# find newest pic already imported
+NEWESTINGALLERY=$(find $GALLERYBASE/var/albums/ -type f -exec ls -lrt "{}" ";" | awk '{ print $6 " " $7 " " $8 }' | sort -n | tail -n1 | cut -f3 -d " ")
+
+# create md5sums of new and imported pics
+find $INCOMING -mindepth 1 -maxdepth 1 -type f -newer $NEWESTINGALLERY -exec md5sum "{}" ";" > $MD5INCOMING
+find $GALLERYBASE/var/albums -type f -exec md5sum "{}" ";" > $MD5GALLERY
+
+# remove the imported pics from the list of new pics
+for i in $(seq 1 $(wc -l $MD5GALLERY | cut -f1 -d" ")); do
+  TOREMOVE="$(head -n$i  $MD5GALLERY | tail -n1 | cut -f1 -d" ")"
+  grep -v "^$TOREMOVE.*" $MD5INCOMING > $MD5INCOMING.rotate && mv $MD5INCOMING.rotate $MD5INCOMING
+done
+
+# link the rest
+for i in $(cat $MD5INCOMING | awk '{print $2 }'); do
+  ln $i $IMPORT/$(basename $i);
+done
+
+# again, tidy up :-D
+rm $MD5INCOMING $MD5GALLERY
+
+# going home
+rm ~/.sync-bc-g3.lock
